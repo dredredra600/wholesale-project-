@@ -1,0 +1,27 @@
+{
+  "agents": [
+    {
+      "id": "el-paso-lead-scout",
+      "name": "El Paso Lead Scout",
+      "role": "Research · list building",
+      "description": "Finds motivated-seller single-family homes inside El Paso city limits with DealMachine, scores them, pulls comps and owner contacts, and publishes up to 50 new leads a day to the Lists tab.",
+      "status": "active",
+      "list_file": "data/el-paso-leads.json",
+      "schedule": { "default_time": "06:50", "timezone": "America/Denver", "frequency": "daily" },
+      "budget": { "daily_credits": 260, "approved": "2026-10-11" },
+      "buy_box": [
+        "City of El Paso, TX (city limits)",
+        "Single-family, built 2000 or earlier",
+        "3+ bed, 1+ bath",
+        "Equity 40%+",
+        "Estimated value $100k–$300k",
+        "At least one signal: tax delinquent, vacant, or owned 10+ years"
+      ],
+      "guardrails": [
+        "Never sends mail, texts or email, and never launches campaigns",
+        "Stays inside the approved daily credit budget",
+        "Leaves missing data blank instead of guessing"
+      ]
+    }
+  ]
+}

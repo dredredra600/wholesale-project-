@@ -1,0 +1,556 @@
+<title>Agent HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field office console. Slim masthead with tabs, then one working surface per tab; Lists is a filter rail over a dense lead ledger that unfolds into a lead sheet. */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --sunk: #e9edeb;
+  --line: #d5dcd9;
+  --ink: #17211f;
+  --muted: #5b6965;
+  --accent: #0f7c74;          /* El Paso turquoise */
+  --accent-ink: #ffffff;
+  --accent-soft: #d9efec;
+  --tax: #b4372b;  --tax-soft: #f7e1de;
+  --vac: #8a5a00;  --vac-soft: #f6ead0;
+  --tenure: #3b5aa6; --tenure-soft: #e1e7f6;
+  --good: #23784a; --warn: #9a6200; --bad: #b4372b;
+  --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1614; --surface: #16201d; --sunk: #1d2925; --line: #2b3a35;
+    --ink: #e6eeeb; --muted: #94a59f;
+    --accent: #3cc2b6; --accent-ink: #062320; --accent-soft: #143a36;
+    --tax: #f08a7e; --tax-soft: #3d1f1b; --vac: #e7b85a; --vac-soft: #3a2c10;
+    --tenure: #93aaf0; --tenure-soft: #1e2a4a;
+    --good: #5fcf8f; --warn: #e7b85a; --bad: #f08a7e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1614; --surface: #16201d; --sunk: #1d2925; --line: #2b3a35;
+  --ink: #e6eeeb; --muted: #94a59f;
+  --accent: #3cc2b6; --accent-ink: #062320; --accent-soft: #143a36;
+  --tax: #f08a7e; --tax-soft: #3d1f1b; --vac: #e7b85a; --vac-soft: #3a2c10;
+  --tenure: #93aaf0; --tenure-soft: #1e2a4a;
+  --good: #5fcf8f; --warn: #e7b85a; --bad: #f08a7e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+/* masthead */
+.mast { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.mast .wrap { display: flex; align-items: center; gap: 24px; padding-block: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-size: 20px; letter-spacing: -.01em; }
+.brand .sub { color: var(--muted); font-size: 12px; }
+.tabs { display: flex; gap: 4px; margin-left: auto; }
+.tab { border: 1px solid transparent; background: none; padding: 6px 14px; border-radius: 999px; font-weight: 600; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+.tab:hover:not([aria-selected="true"]) { border-color: var(--line); color: var(--ink); }
+
+section[role="tabpanel"] { padding-top: 24px; }
+
+/* agents */
+.agent { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.agent > div { padding: 20px; min-width: 0; }
+.agent > div + div { border-left: 1px solid var(--line); }
+.agent h2 { font-size: 22px; }
+.agent .role { color: var(--muted); margin-top: 2px; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.facts .v { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-top: 2px; }
+ul.plain { margin: 8px 0 0; padding-left: 18px; }
+ul.plain li { margin: 2px 0; }
+.sched { display: grid; gap: 10px; }
+.sched-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sched input[type="time"] { padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); font-family: var(--font-mono); font-size: 15px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 7px 14px; border-radius: var(--r); font-weight: 600; }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn:disabled { opacity: .55; cursor: default; }
+.msg { font-size: 13px; }
+.msg.ok { color: var(--good); } .msg.warn { color: var(--warn); } .msg.err { color: var(--bad); }
+
+/* lists header */
+.lhead { display: flex; gap: 16px 24px; align-items: flex-end; flex-wrap: wrap; }
+.lhead h2 { font-size: 26px; letter-spacing: -.01em; }
+.lhead .meta { display: flex; gap: 8px 16px; flex-wrap: wrap; align-items: center; color: var(--muted); margin-top: 4px; }
+.badge-new { background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .04em; text-transform: uppercase; }
+.refresh { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.refresh .note { font-size: 12px; color: var(--muted); text-align: right; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-top: 18px; }
+.kpi { background: var(--surface); padding: 12px 14px; }
+.kpi .v { font-family: var(--font-display); font-size: 24px; font-weight: 600; }
+
+.filters { display: flex; gap: 10px 18px; flex-wrap: wrap; align-items: center; margin-top: 18px; padding: 12px 14px; background: var(--sunk); border-radius: var(--r); }
+.fgroup { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 500; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filters select, .filters input[type="search"] { padding: 5px 9px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.filters input[type="range"] { accent-color: var(--accent); width: 120px; }
+.filters input[type="search"] { min-width: 0; width: 200px; max-width: 100%; }
+
+/* table */
+.tablewrap { margin-top: 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; min-width: 980px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
+td.r, th.r { text-align: right; }
+tr.lead { cursor: pointer; }
+tr.lead:hover td { background: var(--sunk); }
+tr.lead[aria-expanded="true"] td { background: var(--accent-soft); border-bottom-color: transparent; }
+tr.stale td { color: var(--muted); }
+.addr { font-weight: 600; }
+.addr small { display: block; font-weight: 400; color: var(--muted); }
+.score { display: flex; align-items: center; gap: 8px; }
+.score b { font-family: var(--font-display); font-size: 17px; width: 26px; text-align: right; }
+.bar { width: 54px; height: 6px; background: var(--sunk); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.sig { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 3px; margin: 1px 2px 1px 0; white-space: nowrap; }
+.sig.tax { background: var(--tax-soft); color: var(--tax); }
+.sig.vac { background: var(--vac-soft); color: var(--vac); }
+.sig.lt { background: var(--tenure-soft); color: var(--tenure); }
+.sig.nlm { background: var(--sunk); color: var(--muted); }
+.na { color: var(--muted); font-style: italic; font-size: 12px; }
+
+/* lead sheet */
+tr.sheet > td { background: var(--surface); padding: 0; border-bottom: 2px solid var(--accent); }
+.sheet-in { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.sheet-in > div { padding: 16px 18px; min-width: 0; }
+.sheet-in > div + div { border-left: 1px solid var(--line); }
+.sheet-in h3 { font-size: 14px; margin-bottom: 8px; }
+dl.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 0; }
+dl.kv dt { color: var(--muted); font-size: 12px; }
+dl.kv dd { margin: 0; overflow-wrap: anywhere; }
+.phone { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 3px 0; }
+.dnc { font-size: 10px; font-weight: 700; letter-spacing: .05em; color: var(--bad); border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; }
+.copy { border: none; background: none; color: var(--accent); font-size: 12px; padding: 0 2px; }
+.breakdown { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; font-size: 13px; }
+.breakdown .tot { border-top: 1px solid var(--line); padding-top: 4px; font-weight: 700; }
+.sheet-in > .comps { grid-column: 1 / -1; border-top: 1px solid var(--line); border-left: none; padding: 0; }
+.comps table { min-width: 640px; }
+.comps td, .comps th { padding: 6px 10px; font-size: 13px; }
+.comps-wrap { overflow-x: auto; }
+
+.notes { margin-top: 18px; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.notes li { margin: 2px 0; }
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .agent { grid-template-columns: 1fr; }
+  .agent > div + div { border-left: none; border-top: 1px solid var(--line); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sheet-in { grid-template-columns: 1fr; }
+  .sheet-in > div + div { border-left: none; border-top: 1px solid var(--line); }
+  .refresh { margin-left: 0; justify-content: flex-start; }
+  .refresh .note { text-align: left; }
+  .tabs { margin-left: 0; }
+}
+@media (max-width: 520px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: no-preference) { tr.sheet .sheet-in { animation: drop .16s ease-out; } @keyframes drop { from { transform: translateY(-4px); } to { transform: none; } } }
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="brand"><h1>Agent HQ</h1><span class="sub">Wholesale · El Paso, TX</span></div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-agents" aria-controls="panel-agents" aria-selected="false">Agents</button>
+      <button class="tab" role="tab" id="tab-lists" aria-controls="panel-lists" aria-selected="true">Lists</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section role="tabpanel" id="panel-agents" aria-labelledby="tab-agents" hidden>
+    <div id="agents"><p class="muted">Loading agents…</p></div>
+  </section>
+
+  <section role="tabpanel" id="panel-lists" aria-labelledby="tab-lists">
+    <div class="lhead">
+      <div>
+        <div class="label">List · El Paso Lead Scout</div>
+        <h2>Motivated sellers, El Paso city limits</h2>
+        <div class="meta">
+          <span><span class="num" id="leadCount">–</span> leads</span>
+          <span id="newBadgeWrap" hidden><span class="badge-new"><span id="newCount">0</span> new today</span></span>
+          <span id="dmList"></span>
+        </div>
+      </div>
+      <div class="refresh">
+        <div class="note" id="refreshNote">Last run: –</div>
+        <button class="btn" id="refreshBtn" type="button">Refresh</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="filters" role="group" aria-label="Filters">
+      <div class="fgroup" aria-label="Signal">
+        <span class="label">Signal</span>
+        <button class="chip" type="button" data-sig="tax_delinquent" aria-pressed="false">Tax delinquent</button>
+        <button class="chip" type="button" data-sig="vacant" aria-pressed="false">Vacant</button>
+        <button class="chip" type="button" data-sig="long_term_owned" aria-pressed="false">Owned 10+ yrs</button>
+      </div>
+      <div class="fgroup">
+        <label class="label" for="fScore">Score ≥ <span class="num" id="fScoreVal">1</span></label>
+        <input type="range" id="fScore" min="1" max="100" value="1">
+      </div>
+      <div class="fgroup">
+        <label class="label" for="fDate">Added</label>
+        <select id="fDate"><option value="all">Any date</option><option value="today">Today</option><option value="7">Last 7 days</option></select>
+      </div>
+      <div class="fgroup">
+        <label class="label" for="fStatus">Status</label>
+        <select id="fStatus"><option value="active">Matching</option><option value="nlm">No longer matching</option><option value="all">All</option></select>
+      </div>
+      <div class="fgroup">
+        <label class="label" for="fText">Find</label>
+        <input type="search" id="fText" placeholder="Address, owner, ZIP">
+      </div>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>Score</th><th>Property</th><th>Bd/Ba</th><th class="r">Sq ft</th><th class="r">Built</th>
+          <th class="r">Est. value</th><th class="r">Equity</th><th class="r">ARV</th><th>Signals</th><th>Owner</th><th>Contacts</th><th>Added</th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="12" class="empty">Loading leads…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="muted" id="shownNote" style="margin-top:8px;font-size:12px"></p>
+
+    <div class="notes" id="runNotes"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const TZ = "America/Denver";
+  const SETTINGS_DOC = "settings/el-paso-lead-scout";
+  const REMOTE = "Claude Code Remote";
+  const $ = (s, el = document) => el.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const NA = '<span class="na">not available</span>';
+  const money = (v) => v == null ? NA : "$" + Math.round(v).toLocaleString("en-US");
+  const kmoney = (v) => v == null ? NA : "$" + Math.round(v / 1000) + "k";
+  const val = (v, f = (x) => esc(x)) => v == null || v === "" ? NA : f(v);
+  const localDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  const fmtWhen = (iso) => iso ? new Intl.DateTimeFormat("en-US", { timeZone: TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(iso)) + " MT" : "never";
+  const fmtDay = (d) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : NA;
+  const fmtTime12 = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  let DATA = null, AGENTS = [], SETTINGS = null, db = null, user = null;
+  const open = new Set();
+  const state = { sigs: new Set(), score: 1, date: "all", status: "active", text: "" };
+
+  /* ---------- tabs ---------- */
+  const tabs = [...document.querySelectorAll(".tab")];
+  function showTab(id) {
+    tabs.forEach(t => { const on = t.id === id; t.setAttribute("aria-selected", on); document.getElementById(t.getAttribute("aria-controls")).hidden = !on; });
+    store.set("hq.tab", id);
+  }
+  tabs.forEach(t => t.addEventListener("click", () => showTab(t.id)));
+  const initialTab = location.hash === "#agents" ? "tab-agents" : location.hash === "#lists" ? "tab-lists" : (store.get("hq.tab") || "tab-lists");
+  showTab(initialTab);
+
+  /* ---------- data ---------- */
+  async function loadData() {
+    const bust = "?t=" + Date.now();
+    const [leads, agents] = await Promise.all([
+      fetch("data/el-paso-leads.json" + bust).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      fetch("data/agents.json" + bust).then(r => r.ok ? r.json() : { agents: [] }).catch(() => ({ agents: [] })),
+    ]);
+    DATA = leads; AGENTS = agents.agents || [];
+  }
+
+  /* ---------- lists ---------- */
+  const today = () => localDate();
+  function filtered() {
+    const t = today();
+    const weekAgo = localDate(new Date(Date.now() - 6 * 864e5));
+    const q = state.text.trim().toLowerCase();
+    return DATA.leads.filter(l => {
+      if (state.status === "active" && l.status !== "active") return false;
+      if (state.status === "nlm" && l.status !== "no_longer_matching") return false;
+      if (l.score < state.score) return false;
+      for (const s of state.sigs) if (!l.signals[s]) return false;
+      if (state.date === "today" && l.date_added !== t) return false;
+      if (state.date === "7" && l.date_added < weekAgo) return false;
+      if (state.date.startsWith("d:") && l.date_added !== state.date.slice(2)) return false;
+      if (q) {
+        const hay = [l.full_address, l.zip, ...(l.owners || []), l.dm_property_id].join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    }).sort((a, b) => b.score - a.score || (b.equity_amount || 0) - (a.equity_amount || 0));
+  }
+
+  function sigChips(l) {
+    const s = l.signals, out = [];
+    if (s.tax_delinquent) out.push(`<span class="sig tax">Tax delinquent${s.tax_delinquent_year ? " · " + esc(s.tax_delinquent_year) : ""}</span>`);
+    if (s.vacant) out.push('<span class="sig vac">Vacant</span>');
+    if (s.long_term_owned) out.push(`<span class="sig lt">Owned ${esc(s.years_owned)} yrs</span>`);
+    if (l.status === "no_longer_matching") out.push('<span class="sig nlm">No longer matching</span>');
+    return out.join("");
+  }
+
+  function sheet(l) {
+    const s = l.signals, b = l.score_breakdown || {};
+    const absentee = l.absentee === true ? "Yes" : l.absentee === false ? "No (owner-occupied)" : null;
+    const mailing = l.owner_mailing_address
+      ? esc(l.owner_mailing_address)
+      : l.absentee === false ? "Same as property (owner-occupied per DealMachine)" : NA;
+    const phones = (l.phones || []).length
+      ? l.phones.map(p => `<div class="phone"><span class="num">${esc(p.number.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3"))}</span><span class="muted">${esc(p.type)}</span>${p.do_not_call ? '<span class="dnc" title="On the Do Not Call registry">DNC</span>' : ""}<button class="copy" type="button" data-copy="${esc(p.number)}">Copy</button></div>`).join("")
+      : (l.skip_traced ? '<span class="na">none found by skip trace</span>' : '<span class="na">not skip traced</span>');
+    const emails = (l.emails || []).length ? l.emails.map(e => `<div style="overflow-wrap:anywhere">${esc(e)}</div>`).join("") : (l.skip_traced ? '<span class="na">none found by skip trace</span>' : NA);
+    const people = (l.skip_trace_people || []).map(p => esc(p.name)).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+    const arv = l.arv;
+    const comps = arv && arv.comps && arv.comps.length ? `
+      <div class="comps"><div style="padding:14px 18px 6px"><h3>Comps · ${arv.comp_count} sold within 1 mi, last 12 months${arv.date_from ? ` (${fmtDay(arv.date_from)} – ${fmtDay(arv.date_to)})` : ""}</h3>
+      <div class="muted" style="font-size:12px">ARV = median sold $/sq ft (<span class="num">$${esc(arv.median_ppsf)}</span>) × subject ${esc(l.sqft)} sq ft. Texas does not disclose sale prices, so most comp prices are DealMachine estimates.</div></div>
+      <div class="comps-wrap"><table><thead><tr><th>Address</th><th class="r">Sold</th><th class="r">Price</th><th class="r">$/sq ft</th><th class="r">Sq ft</th><th>Bd/Ba</th><th class="r">Built</th><th class="r">Dist.</th><th>Price source</th></tr></thead><tbody>
+      ${arv.comps.map(c => `<tr><td>${esc(c.address)}</td><td class="r num">${fmtDay(c.sale_date)}</td><td class="r num">${money(c.sale_price)}</td><td class="r num">${c.sale_price && c.sqft ? "$" + Math.round(c.sale_price / c.sqft) : NA}</td><td class="r num">${val(c.sqft)}</td><td class="num">${val(c.beds)}/${val(c.baths)}</td><td class="r num">${val(c.year_built)}</td><td class="r num">${c.distance_mi != null ? c.distance_mi.toFixed(2) + " mi" : NA}</td><td class="muted">${c.sale_type === "Estimated Sales Price" ? "Estimated" : esc(c.sale_type || "")}</td></tr>`).join("")}
+      </tbody></table></div></div>` : `<div class="comps" style="padding:14px 18px"><h3>Comps</h3><span class="na">No qualifying sold comps within 1 mile in the last 12 months, so ARV is not available.</span></div>`;
+    return `<tr class="sheet"><td colspan="12"><div class="sheet-in">
+      <div><h3>Property</h3><dl class="kv">
+        <dt>Address</dt><dd>${esc(l.full_address)}</dd>
+        <dt>Beds / baths</dt><dd class="num">${val(l.beds)} / ${val(l.baths)}</dd>
+        <dt>Living area</dt><dd class="num">${val(l.sqft, v => v.toLocaleString() + " sq ft")}</dd>
+        <dt>Year built</dt><dd class="num">${val(l.year_built)}</dd>
+        <dt>APN</dt><dd class="num">${val(l.apn)}</dd>
+        <dt>Est. value</dt><dd class="num">${money(l.estimated_value)}</dd>
+        <dt>Equity</dt><dd class="num">${val(l.equity_pct, v => v + "%")} · ${money(l.equity_amount)}</dd>
+        <dt>Last sale</dt><dd class="num">${l.last_sale_date ? fmtDay(l.last_sale_date) + " · " + money(l.last_sale_price) : NA}</dd>
+        <dt>Est. ARV</dt><dd class="num">${arv && arv.value ? money(arv.value) + ` · ${arv.comp_count} comps` : NA}</dd>
+        <dt>DealMachine ID</dt><dd class="num">${esc(l.dm_property_id)}</dd>
+        <dt>Added</dt><dd>${fmtDay(l.date_added)} · checked ${fmtDay(l.last_checked)}</dd>
+      </dl></div>
+      <div><h3>Owner &amp; contact</h3><dl class="kv">
+        <dt>Owner of record</dt><dd>${(l.owners || []).length ? l.owners.map(esc).join("<br>") : NA}</dd>
+        <dt>Absentee</dt><dd>${absentee ? esc(absentee) + (l.out_of_state_owner ? " · out of state" : "") : NA}</dd>
+        <dt>Mailing address</dt><dd>${mailing}</dd>
+        ${people ? `<dt>Skip-traced</dt><dd>${people}</dd>` : ""}
+        <dt>Phones</dt><dd>${phones}</dd>
+        <dt>Emails</dt><dd>${emails}</dd>
+      </dl></div>
+      <div><h3>Motivation score · ${l.score}</h3><div class="breakdown">
+        <span>Equity ${val(l.equity_pct, v => v + "%")}</span><span class="num">+${b.equity ?? 0}</span>
+        <span>Tax delinquent${s.tax_delinquent_year ? " (" + esc(s.tax_delinquent_year) + ")" : ""}</span><span class="num">+${b.tax_delinquent ?? 0}</span>
+        <span>Vacant</span><span class="num">+${b.vacant ?? 0}</span>
+        <span>Years owned: ${s.years_owned != null ? esc(s.years_owned) : '<span class="na">not available</span>'}</span><span class="num">+${b.years_owned ?? 0}</span>
+        <span class="tot">Total (cap 100)</span><span class="tot num">${l.score}</span>
+      </div>
+      ${l.status === "no_longer_matching" ? `<p class="msg warn" style="margin-top:12px">No longer matching: ${esc((l.no_longer_matching_reasons || []).join("; "))}</p>` : ""}
+      </div>
+      ${comps}
+    </div></td></tr>`;
+  }
+
+  function renderLists() {
+    if (!DATA) return;
+    const t = today();
+    const active = DATA.leads.filter(l => l.status === "active");
+    const newToday = DATA.leads.filter(l => l.date_added === t).length;
+    $("#leadCount").textContent = active.length.toLocaleString();
+    $("#newCount").textContent = newToday;
+    $("#newBadgeWrap").hidden = newToday === 0;
+    const run = DATA.runs?.[DATA.runs.length - 1];
+    $("#dmList").textContent = run?.dealmachine_list?.name ? "DealMachine list: " + run.dealmachine_list.name : "";
+    const runTime = SETTINGS?.run_time || AGENTS[0]?.schedule?.default_time || "06:50";
+    $("#refreshNote").innerHTML = `Last run: <b>${esc(fmtWhen(DATA.last_refreshed))}</b>${run ? ` · +${run.new_leads} leads` : ""}<br>Next run: daily at ${esc(fmtTime12(runTime))} MT`;
+
+    const withArv = active.filter(l => l.arv && l.arv.value).length;
+    const withPhone = active.filter(l => (l.phones || []).length).length;
+    const avg = active.length ? Math.round(active.reduce((a, l) => a + l.score, 0) / active.length) : 0;
+    $("#kpis").innerHTML = [
+      ["Matching leads", active.length.toLocaleString()],
+      ["Average score", avg],
+      ["With phone", `${withPhone} <span class="muted" style="font-size:14px">/ ${active.length}</span>`],
+      ["With ARV", `${withArv} <span class="muted" style="font-size:14px">/ ${active.length}</span>`],
+    ].map(([k, v]) => `<div class="kpi"><div class="label">${k}</div><div class="v num">${v}</div></div>`).join("");
+
+    const dates = [...new Set(DATA.leads.map(l => l.date_added))].sort().reverse();
+    const sel = $("#fDate"), cur = sel.value;
+    sel.innerHTML = `<option value="all">Any date</option><option value="today">Today</option><option value="7">Last 7 days</option>` + dates.map(d => `<option value="d:${d}">${fmtDay(d)}</option>`).join("");
+    sel.value = [...sel.options].some(o => o.value === cur) ? cur : "all";
+
+    const rows = filtered();
+    $("#rows").innerHTML = rows.length ? rows.map(l => {
+      const isOpen = open.has(l.dm_property_id);
+      const owner = (l.owners || [])[0];
+      const nPh = (l.phones || []).length, nEm = (l.emails || []).length;
+      return `<tr class="lead${l.status !== "active" ? " stale" : ""}" tabindex="0" data-id="${esc(l.dm_property_id)}" aria-expanded="${isOpen}">
+        <td><div class="score"><b>${l.score}</b><span class="bar"><i style="width:${l.score}%"></i></span></div></td>
+        <td class="addr">${esc(l.address)}${l.date_added === t ? ' <span class="badge-new">New</span>' : ""}<small>${esc(l.zip || "")}${l.absentee ? " · absentee" : ""}</small></td>
+        <td class="num">${val(l.beds)}/${val(l.baths)}</td>
+        <td class="r num">${val(l.sqft, v => v.toLocaleString())}</td>
+        <td class="r num">${val(l.year_built)}</td>
+        <td class="r num">${kmoney(l.estimated_value)}</td>
+        <td class="r num">${val(l.equity_pct, v => v + "%")}</td>
+        <td class="r num">${l.arv && l.arv.value ? kmoney(l.arv.value) : NA}</td>
+        <td>${sigChips(l)}</td>
+        <td>${owner ? esc(owner) : NA}${(l.owners || []).length > 1 ? ` <span class="muted">+${l.owners.length - 1}</span>` : ""}</td>
+        <td class="num" style="white-space:nowrap">${l.skip_traced ? `${nPh} ph · ${nEm} em` : '<span class="na">not traced</span>'}</td>
+        <td style="white-space:nowrap">${fmtDay(l.date_added)}</td>
+      </tr>${isOpen ? sheet(l) : ""}`;
+    }).join("") : `<tr><td colspan="12" class="empty">No leads match these filters. Clear a signal or lower the score to see more.</td></tr>`;
+    $("#shownNote").textContent = `Showing ${rows.length} of ${DATA.leads.length} leads, highest score first. Click a row for details and comps.`;
+
+    const notes = run?.notes || [];
+    const cr = run?.credits;
+    $("#runNotes").innerHTML = run ? `<div class="label">Last run</div><ul class="plain">
+      ${cr ? `<li>Credits used: <span class="num">${cr.total ?? "–"}</span> (${cr.properties ?? 0} property, ${cr.people ?? 0} people)${cr.remaining_after_run != null ? ` · ${cr.remaining_after_run.toLocaleString()} left this cycle` : ""}</li>` : ""}
+      ${run.total_matches ? `<li>Buy-box matches in city limits: tax delinquent ${run.total_matches.tax_delinquent?.toLocaleString() ?? "–"}, vacant ${run.total_matches.vacant?.toLocaleString() ?? "–"}, owned 10+ years ${run.total_matches.long_term_owned?.toLocaleString() ?? "–"}</li>` : ""}
+      ${notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : "";
+  }
+
+  $("#rows").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-copy]");
+    if (c) {
+      e.stopPropagation();
+      const done = () => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1200); };
+      try { navigator.clipboard.writeText(c.dataset.copy).then(done, () => { c.textContent = c.dataset.copy; }); } catch { c.textContent = c.dataset.copy; }
+      return;
+    }
+    const tr = e.target.closest("tr.lead");
+    if (!tr) return;
+    const id = tr.dataset.id;
+    open.has(id) ? open.delete(id) : open.add(id);
+    renderLists();
+  });
+  $("#rows").addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr.lead")) { e.preventDefault(); e.target.click(); }
+  });
+  document.querySelectorAll(".chip[data-sig]").forEach(b => b.addEventListener("click", () => {
+    const s = b.dataset.sig; state.sigs.has(s) ? state.sigs.delete(s) : state.sigs.add(s);
+    b.setAttribute("aria-pressed", state.sigs.has(s)); renderLists();
+  }));
+  $("#fScore").addEventListener("input", (e) => { state.score = +e.target.value; $("#fScoreVal").textContent = state.score; renderLists(); });
+  $("#fDate").addEventListener("change", (e) => { state.date = e.target.value; renderLists(); });
+  $("#fStatus").addEventListener("change", (e) => { state.status = e.target.value; renderLists(); });
+  $("#fText").addEventListener("input", (e) => { state.text = e.target.value; renderLists(); });
+  $("#refreshBtn").addEventListener("click", async () => {
+    const b = $("#refreshBtn"); b.disabled = true; b.textContent = "Refreshing…";
+    try { await loadData(); renderAll(); b.textContent = "Refreshed"; }
+    catch { b.textContent = "Couldn't load"; }
+    setTimeout(() => { b.textContent = "Refresh"; b.disabled = false; }, 1400);
+  });
+
+  /* ---------- agents ---------- */
+  function renderAgents() {
+    const run = DATA?.runs?.[DATA.runs.length - 1];
+    $("#agents").innerHTML = AGENTS.length ? AGENTS.map(a => {
+      const runTime = SETTINGS?.run_time || a.schedule.default_time;
+      return `<article class="agent">
+        <div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2>${esc(a.name)}</h2><span class="status">${esc(a.status === "active" ? "Active" : a.status)}</span></div>
+          <div class="role">${esc(a.role)}</div>
+          <p style="max-width:62ch">${esc(a.description)}</p>
+          <div class="facts">
+            <div><div class="label">Last run</div><div class="v">${esc(DATA ? fmtWhen(DATA.last_refreshed) : "–")}</div></div>
+            <div><div class="label">Leads on list</div><div class="v num">${DATA ? DATA.leads.filter(l => l.status === "active").length : "–"}</div></div>
+            <div><div class="label">Credits last run</div><div class="v num">${run?.credits?.total ?? "–"} <span class="muted" style="font-size:13px">/ ${a.budget.daily_credits}</span></div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:18px">
+            <div><div class="label">Buy box</div><ul class="plain">${a.buy_box.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+            <div><div class="label">Guardrails</div><ul class="plain">${a.guardrails.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+          </div>
+        </div>
+        <div class="sched">
+          <div class="label">Daily run time</div>
+          <form id="schedForm" class="sched-row">
+            <input type="time" id="runTime" value="${esc(runTime)}" step="300" required aria-label="Daily run time, Mountain Time">
+            <span class="muted">Mountain Time</span>
+            <button class="btn primary" type="submit" id="saveTime">Save time</button>
+          </form>
+          <div class="msg" id="schedMsg" role="status" aria-live="polite"></div>
+          <p class="muted" style="font-size:12px;margin:0">Runs once a day at this time, adds up to 50 new leads and stays inside the ${a.budget.daily_credits}-credit daily budget. ${SETTINGS?.applied_at ? `Schedule last applied ${esc(fmtWhen(SETTINGS.applied_at))}.` : ""}</p>
+          <div style="margin-top:6px"><button class="btn" type="button" id="goLists">Open the list →</button></div>
+        </div>
+      </article>`;
+    }).join("") : `<p class="empty">No agents are registered yet.</p>`;
+    const go = $("#goLists"); if (go) go.addEventListener("click", () => showTab("tab-lists"));
+    wireSchedule();
+  }
+
+  function setMsg(kind, text) { const m = $("#schedMsg"); if (m) { m.className = "msg " + kind; m.textContent = text; } }
+
+  function wireSchedule() {
+    const form = $("#schedForm"); if (!form) return;
+    const canEdit = db && (user ? (user.isOwner?.() || user.canEdit?.()) : true);
+    if (!db) { $("#saveTime").disabled = true; setMsg("warn", "Open this page in claude.ai while signed in to change the run time."); }
+    else if (!canEdit) { $("#saveTime").disabled = true; setMsg("", "Only the owner can change the run time."); }
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const t = $("#runTime").value;
+      if (!/^\d{2}:\d{2}$/.test(t)) { setMsg("err", "Enter a time like 06:50."); return; }
+      const [h, m] = t.split(":").map(Number);
+      const cron = `CRON_TZ=${TZ} ${m} ${h} * * *`;
+      const btn = $("#saveTime"); btn.disabled = true; setMsg("", "Saving…");
+      const next = { ...(SETTINGS || {}), run_time: t, timezone: TZ, cron, updated_at: new Date().toISOString(), applied: false };
+      try { await db.doc(SETTINGS_DOC).set(next); SETTINGS = next; }
+      catch (err) { btn.disabled = false; setMsg("err", err?.code === "invalid_argument" ? "You don't have permission to change the run time." : "Couldn't save the time. Try again."); return; }
+      if (!SETTINGS.trigger_id) { btn.disabled = false; setMsg("warn", `Saved ${fmtTime12(t)}. The schedule hasn't been linked yet; the next run will apply it.`); renderLists(); return; }
+      const mcp = window.claude?.use ? await window.claude.use("mcp") : null;
+      if (!mcp) { btn.disabled = false; setMsg("warn", `Saved ${fmtTime12(t)} MT. The next run will switch the schedule to this time.`); renderLists(); return; }
+      try {
+        await mcp.callTool(REMOTE, "update_trigger", { trigger_id: SETTINGS.trigger_id, cron_expression: cron });
+        const applied = { ...SETTINGS, applied: true, applied_at: new Date().toISOString() };
+        try { await db.doc(SETTINGS_DOC).set(applied); SETTINGS = applied; } catch {}
+        setMsg("ok", `Done. Lead Scout now runs daily at ${fmtTime12(t)} MT.`);
+      } catch (err) {
+        const code = err?.code;
+        const why = code === "server_not_connected" ? `Add the ${REMOTE} connector in claude.ai Settings → Connectors to apply it right away.`
+          : code === "needs_reauth" ? `Reconnect ${REMOTE} in claude.ai Settings → Connectors to apply it right away.`
+          : code === "not_in_manifest" ? `Allow ${REMOTE} for this page to apply it right away.`
+          : code === "tool_error" ? `The scheduler said: ${err.message}`
+          : "The scheduler didn't confirm the change.";
+        setMsg("warn", `Saved ${fmtTime12(t)} MT; the next run will switch to it. ${why}`);
+      }
+      btn.disabled = false; renderLists();
+    });
+  }
+
+  function renderAll() { renderLists(); renderAgents(); }
+
+  /* ---------- boot ---------- */
+  loadData().then(renderAll).catch(() => {
+    $("#rows").innerHTML = `<tr><td colspan="12" class="empty">The lead file didn't load. Press Refresh to try again.</td></tr>`;
+    renderAgents();
+  });
+  (async () => {
+    try {
+      if (!window.claude?.use) { if (DATA) renderAgents(); return; }
+      [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      if (!db) { if (DATA) renderAgents(); return; }
+      db.doc(SETTINGS_DOC).onSnapshot((snap) => {
+        SETTINGS = snap.exists ? snap.data() : null;
+        if (DATA) { renderLists(); if (!document.activeElement?.closest?.("#schedForm")) renderAgents(); }
+      }, () => {});
+    } catch { /* runs without shared settings */ }
+  })();
+})();
+</script>
