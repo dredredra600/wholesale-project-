@@ -76,6 +76,7 @@
       db.doc('config/main').onSnapshot((d) => { if (d.exists) S.config = mergeConfig(d.data()); done(); }, err);
       setTimeout(() => { if (!S.ready) { S.ready = true; refresh(true); } }, 10000);
     } else { S.ready = true; }
+    buildChatPanel();
     route();
   }
 
@@ -131,6 +132,7 @@
   let galaxy = null;
   function current() { const h = (location.hash || '#home').slice(1); return PAGES.some((p) => p[0] === h) ? h : 'home'; }
   function route() {
+    if (location.hash === '#chat') { location.hash = 'home'; openChat(true); return; }
     if (galaxy) { galaxy.stop(); galaxy = null; }
     const id = current();
     const view = $('#view');
@@ -263,10 +265,9 @@
   }
   function renderPage(id) {
     const v = $('#view');
-    const fn = { leads: pgLeads, intake: pgIntake, quote: pgQuote, booking: pgBooking, followup: pgFollow, content: pgContent, chat: pgChat, setup: pgSetup }[id];
+    const fn = { leads: pgLeads, intake: pgIntake, quote: pgQuote, booking: pgBooking, followup: pgFollow, content: pgContent, setup: pgSetup }[id];
     if (!fn) return;
     const st = v.scrollTop; v.innerHTML = '<div class="page">' + fn() + '</div>'; v.scrollTop = st;
-    if (id === 'chat') chatMounted();
   }
   const historyBy = (agentName) => { const o = []; Object.values(S.leads).forEach((l) => l.history.forEach((h) => { if (h.agent === agentName) o.push(Object.assign({ lead: l }, h)); })); return o.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)); };
   function handledList(agentName) {
@@ -389,22 +390,44 @@
 
   /* ---------- chat ---------- */
   const SYSTEM = 'You are the assistant inside the Pure Sport Detailing dashboard, a private tool for the owner of a car detailing business. Be brief and practical. You can read dashboard data with the tools provided but you cannot change it or message customers. Never invent prices, availability or customer facts: if the data is missing, say what is missing. Agents only draft; the owner sends and approves everything.';
-  function pgChat() {
-    return head('chat', 'Chat', 'Ask about your leads, draft reply wording, or plan content. Claude can read the dashboard but cannot change it or message anyone.') +
-      (sample ? '<div class="chat"><div class="msgs" id="msgs" aria-live="polite"></div><div class="chips">' + ['What needs my attention?', 'Draft a PRICE reply template for me to edit', 'Write 3 Reel hooks for a ceramic coating job', 'Which leads are missing details?'].map((s) => '<button class="chip" data-act="suggest" data-v="' + esc(s) + '">' + esc(s) + '</button>').join('') + '</div><form id="chatform" class="row" style="flex-wrap:nowrap"><div class="fld" style="flex:1"><label class="sr" for="chatin" style="position:absolute;left:-9999px">Message</label><input id="chatin" placeholder="Ask anything about your business or leads" autocomplete="off"></div><button class="btn go" type="submit">Send</button></form></div>' : '<div class="empty">Chat needs Claude access in this view. Open the dashboard from claude.ai while signed in to use it.</div>');
+  let dictation = null, listening = false;
+  function buildChatPanel() {
+    const fab = document.createElement('button'); fab.id = 'chatfab'; fab.className = 'fab'; fab.dataset.act = 'togglechat'; fab.textContent = 'Ask Claude'; fab.setAttribute('aria-controls', 'chatpanel');
+    const pan = document.createElement('aside'); pan.id = 'chatpanel'; pan.className = 'chatpanel'; pan.hidden = true; pan.setAttribute('role', 'dialog'); pan.setAttribute('aria-label', 'Chat with Claude');
+    pan.innerHTML = '<div class="row between"><h2>Chat with Claude</h2><button class="btn ghost" data-act="closechat" aria-label="Close chat">✕</button></div>' +
+      '<div class="muted">Claude can read your leads, pricing and setup, and help draft wording. It cannot change anything or message customers.</div>' +
+      '<div class="msgs" id="msgs" aria-live="polite"></div>' +
+      '<div class="chips">' + ['What needs my attention?', 'Draft a PRICE reply template for me to edit', 'Write 3 Reel hooks for a ceramic coating job', 'Which leads are missing details?'].map((s) => '<button class="chip" data-act="suggest" data-v="' + esc(s) + '">' + esc(s) + '</button>').join('') + '</div>' +
+      '<form id="chatform" class="row" style="flex-wrap:nowrap"><div class="fld" style="flex:1"><label for="chatin" style="position:absolute;left:-9999px">Message</label><input id="chatin" placeholder="Type or tap the mic and talk" autocomplete="off"></div><button class="btn" type="button" id="micbtn" data-act="mic" aria-label="Dictate a message" hidden>🎙</button><button class="btn go" type="submit">Send</button></form>';
+    document.body.appendChild(pan); document.body.appendChild(fab);
+    if (!sample) { pan.querySelector('#msgs').innerHTML = '<div class="empty">Chat needs Claude access in this view. Open the dashboard from claude.ai while signed in.</div>'; pan.querySelector('#chatform').hidden = true; pan.querySelector('.chips').hidden = true; }
+    try { const j = JSON.parse(LS.get('psd.chat') || '[]'); if (Array.isArray(j)) S.chat = j.filter((m) => m && m.role && typeof m.content === 'string' && m.content).slice(-30); } catch (e) {}
+    renderMsgs();
+    (async () => {
+      try { dictation = await window.claude.use('dictation'); } catch (e) { dictation = null; }
+      if (!dictation) return;
+      $('#micbtn').hidden = false; let base = '';
+      dictation.onPartial(({ text }) => { $('#chatin').value = (base + ' ' + text).trim(); });
+      dictation.onFinal(({ text }) => { base = ($('#chatin').value || '').trim(); $('#chatin').value = base; void text; });
+      dictation.onState(({ state }) => { listening = state === 'listening'; const b = $('#micbtn'); if (b) { b.classList.toggle('go', listening); b.setAttribute('aria-label', listening ? 'Stop dictating' : 'Dictate a message'); } if (listening) base = ($('#chatin').value || '').trim(); });
+    })();
+  }
+  function openChat(on) {
+    const pan = $('#chatpanel'); if (!pan) return;
+    const show = on === undefined ? pan.hidden : on; pan.hidden = !show; $('#chatfab').hidden = show;
+    if (show) { renderMsgs(); setTimeout(() => { const i = $('#chatin'); if (i && !i.hidden) i.focus(); }, 50); }
   }
   function renderMsgs() {
-    const box = $('#msgs'); if (!box) return;
-    box.innerHTML = S.chat.length ? S.chat.map((m, i) => '<div class="msg ' + (m.role === 'user' ? 'user' : 'bot') + '">' + esc(m.content || '…') + (m.role === 'assistant' && m.content ? '<div class="row" style="margin-top:8px"><button class="btn ghost" data-act="usetpl" data-k="PRICE" data-i="' + i + '">Use as PRICE template</button><button class="btn ghost" data-act="usetpl" data-k="BOOK" data-i="' + i + '">Use as BOOK template</button></div>' : '') + '</div>').join('') : '<div class="empty">Ask a question or pick a suggestion below. When Claude drafts reply wording, you can put it into your template with one click.</div>';
+    const box = $('#msgs'); if (!box || !sample) return;
+    box.innerHTML = S.chat.length ? S.chat.map((m, i) => '<div class="msg ' + (m.role === 'user' ? 'user' : 'bot') + '">' + esc(m.content || '…') + (m.role === 'assistant' && m.content ? '<div class="row" style="margin-top:8px"><button class="btn ghost" data-act="usetpl" data-k="PRICE" data-i="' + i + '">Use as PRICE template</button><button class="btn ghost" data-act="usetpl" data-k="BOOK" data-i="' + i + '">Use as BOOK template</button></div>' : '') + '</div>').join('') : '<div class="empty">Ask a question or pick a suggestion. When Claude drafts reply wording, one click puts it into your template.</div>';
     box.scrollTop = box.scrollHeight;
   }
-  function chatMounted() { renderMsgs(); }
-  let chatCtl = null;
   async function sendChat(text) {
-    if (!sample || !text.trim() || S.busy) return;
-    S.chat.push({ role: 'user', content: text.trim() }); const bot = { role: 'assistant', content: '' }; S.chat.push(bot); S.busy = true; renderMsgs();
-    const msgs = S.chat.slice(0, -1).slice(-14).map((m, i, a) => ({ role: m.role, content: (i === 0 && m.role === 'user' ? SYSTEM + '\n\n' : '') + m.content }));
-    if (msgs[0].role !== 'user') msgs.shift();
+    if (!sample || !text.trim() || S.chatBusy) return;
+    if (listening && dictation) { try { await dictation.stop(); } catch (e) {} }
+    S.chat.push({ role: 'user', content: text.trim() }); const bot = { role: 'assistant', content: '' }; S.chat.push(bot); S.chatBusy = true; renderMsgs();
+    const msgs = S.chat.slice(0, -1).slice(-14).map((m, i) => ({ role: m.role, content: (i === 0 && m.role === 'user' ? SYSTEM + ' The owner is currently viewing the "' + current() + '" page.\n\n' : '') + m.content }));
+    while (msgs.length && msgs[0].role !== 'user') msgs.shift();
     const tools = [
       { name: 'dashboard_summary', description: 'Counts of new leads, quotes to approve, upcoming jobs, follow-ups due and content drafts. Returns an object.', execute: () => counts() },
       { name: 'list_leads', description: 'List leads with id, handle, keyword, stage, vehicle, service. Optional stage filter. Returns an array.', inputSchema: { type: 'object', properties: { stage: { type: 'string' } } }, execute: (i) => leadsArr().filter((l) => !i || !i.stage || l.stage === i.stage).slice(0, 40).map((l) => ({ id: l.id, handle: l.handle, keyword: l.keyword, stage: l.stage, vehicle: l.vehicle, service: l.service, sample: l.sample })) },
@@ -414,7 +437,8 @@
     try {
       await sample(msgs, { tools, cache: false, onText: (u) => { bot.content = u.text; renderMsgs(); } });
     } catch (e) { bot.content = bot.content || (e && e.code === 'not_granted' ? 'Claude access was declined for this page.' : 'Claude could not answer right now (' + ((e && (e.code || e.message)) || 'error') + '). Try again in a moment.'); }
-    S.busy = false; renderMsgs();
+    S.chatBusy = false; renderMsgs();
+    LS.set('psd.chat', JSON.stringify(S.chat.filter((m) => m.content).slice(-30)));
   }
 
   /* ---------- lead drawer ---------- */
@@ -464,7 +488,10 @@
       else if (a === 'approvec' || a === 'savec') { const c = clone(S.content[id]); c.hook = val('h-' + id); c.caption = val('c-' + id); if (a === 'approvec') c.status = 'approved'; await saveContent(c); toast(a === 'approvec' ? 'Approved. Copy it into Buffer or Instagram when you are ready.' : 'Saved'); }
       else if (a === 'copyc') copy(val('h-' + id) + '\n\n' + val('c-' + id));
       else if (a === 'delc') await removeContent(id);
-      else if (a === 'suggest') { const i = $('#chatin'); if (i) i.value = el.dataset.v; sendChat(el.dataset.v); if (i) i.value = ''; }
+      else if (a === 'suggest') { sendChat(el.dataset.v); }
+      else if (a === 'togglechat') openChat();
+      else if (a === 'closechat') openChat(false);
+      else if (a === 'mic') { if (!dictation) return; if (listening) await dictation.stop(); else await dictation.start(); }
       else if (a === 'usetpl') { S.config.templates[el.dataset.k] = S.chat[Number(el.dataset.i)].content; S.config.templatesAreSample = false; await saveConfig(); toast('Saved as your ' + el.dataset.k + ' template'); }
     } catch (e) { fail(e.message || String(e), l ? (a === 'prep' || a === 'confirm' ? 'booking' : 'quote') : 'system'); }
   }
@@ -491,7 +518,7 @@
     const bg = e.target.closest('.drawer-bg'); if (bg && e.target === bg) { S.open = null; renderDrawer(); }
     if (e.target.closest('.menu a')) toggleMenu(false);
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if ($('.menu')) toggleMenu(false); else if (S.open) { S.open = null; renderDrawer(); } } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if ($('.menu')) toggleMenu(false); else if ($('#chatpanel') && !$('#chatpanel').hidden) openChat(false); else if (S.open) { S.open = null; renderDrawer(); } } });
   document.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (e.target.id === 'chatform') { const i = $('#chatin'); const t = i.value; i.value = ''; sendChat(t); }

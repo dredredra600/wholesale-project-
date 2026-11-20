@@ -110,8 +110,12 @@ tr:last-child td { border-bottom: 0; }
 .menu a { display: flex; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; font: 500 18px var(--display); }
 .menu a small { font: 11px var(--body); color: var(--dim); align-self: center; }
 .menu a:hover { color: var(--glow); }
-.chat { display: grid; gap: 12px; }
-.msgs { display: grid; gap: 10px; max-height: 56vh; overflow-y: auto; padding-right: 4px; }
+.fab { position: fixed; z-index: 45; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--glow); color: #1b1206; border: 0; border-radius: 999px; padding: 11px 20px; font: 600 13px var(--display); box-shadow: 0 6px 24px rgba(255,181,97,.28); }
+.fab:hover { filter: brightness(1.08); }
+.fab[hidden], .chatpanel[hidden] { display: none; }
+.chatpanel { position: fixed; z-index: 55; top: 0; right: 0; bottom: 0; width: min(430px, 100%); background: var(--panel); border-left: 1px solid var(--line); padding: calc(18px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) 18px; display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 12px; }
+.chatpanel h2 { font-size: 16px; }
+.msgs { display: grid; gap: 10px; overflow-y: auto; align-content: start; padding-right: 4px; min-height: 0; }
 .msg { max-width: 84ch; padding: 10px 14px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; }
 .msg.user { background: var(--glow-soft); border: 1px solid rgba(255,181,97,.25); justify-self: end; }
 .msg.bot { background: var(--panel-2); border: 1px solid var(--line); }
